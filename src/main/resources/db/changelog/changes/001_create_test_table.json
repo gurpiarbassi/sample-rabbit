@@ -1,0 +1,30 @@
+{
+  "databaseChangeLog": [
+    {
+      "changeSet": {
+        "id": "001_create_history_table",
+        "author": "Me",
+        "changes": [
+          {
+            "createTable": {
+              "tableName": "my_table",
+              "columns": [
+                {
+                  "column": {
+                    "autoIncrement": true,
+                    "name": "id",
+                    "type": "BIGINT(20)",
+                    "constraints": {
+                      "nullable": false,
+                      "primaryKey": true
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

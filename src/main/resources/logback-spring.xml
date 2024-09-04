@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <contextName>${spring.application.name}</contextName>
+
+  <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+  <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
+
+  <!-- Don't forget to set "spring.application.name" in application.yml -->
+  <springProperty scope="local" name="springApplicationName" source="spring.application.name" />
+  <property name="LOG_FILE" value="${LOG_FILE:-${LOG_PATH:-logs}/${springApplicationName}}" />
+
+  <springProperty scope="local" name="log.appender" source="log.appender" defaultValue="CONSOLE"/>
+  <springProperty scope="local" name="log.file.path" source="log.file.path"/>
+  <springProperty scope="local" name="log.organization" source="log.organization" defaultValue="cads"/>
+  <springProperty scope="local" name="log.file.name" source="log.file.name" defaultValue="cads-service"/>
+  <springProperty scope="local" name="log.level" source="log.level" defaultValue="INFO"/>
+  <springProperty scope="local" name="log.package.name" source="log.package.name" defaultValue="uk.gov.hmrc" />
+  <springProperty scope="context" name="serviceName" source="log.service" defaultValue="cads-service"/>
+  <springProperty scope="context" name="serverName" source="HOSTNAME" />
+
+  <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter" />
+
+  <property name="CONSOLE_LOG_PATTERN" value="[%clr(%date]){faint} %clr([%thread]) %-5level %clr([${log.organization},${serviceName}]){magenta} [%logger{36}] %clr(%replace([correlationId: %X{CORRELATION_ID}]){'\\[correlationId: \\]', ''}) - %clr(%X{REQUEST_LOG_ID}){cyan} %msg %n" />
+  <property name="FILE_LOG_PATTERN" value="[%date] [%thread] %-5level [${log.organization},${serviceName}] %logger{36} %replace([correlationId: %X{CORRELATION_ID}]){'\\[correlationId: \\]', ''} - %X{REQUEST_LOG_ID} %X{LOG_SERVICE_ACTION} %msg%n" />
+
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <layout class="ch.qos.logback.classic.PatternLayout">
+      <Pattern>
+        ${CONSOLE_LOG_PATTERN}
+      </Pattern>
+    </layout>
+  </appender>
+
+  <appender name="CONSOLE_JSON_LYT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <!-- Amend field names -->
+      <includeContext>true</includeContext>
+      <fieldNames>
+        <timestamp>timestamp</timestamp>
+        <message>message</message>
+        <logger>loggerClass</logger>
+        <thread>thread</thread>
+        <level>level</level>
+        <stackTrace>stackTrace</stackTrace>
+        <version>[ignore]</version>
+        <levelValue>[ignore]</levelValue>
+      </fieldNames>
+
+      <includeCallerData>true</includeCallerData>
+
+      <messageSplitRegex>SYSTEM</messageSplitRegex>
+
+      <providers>
+        <timestamp>
+          <timeZone>UTC</timeZone>
+        </timestamp>
+        <!-- Log all StructuredArgument instances -->
+        <arguments />
+        <!-- Log all MDC fields -->
+        <mdc />
+        <throwableClassName>true</throwableClassName>
+        <!-- Include Exception stack traces -->
+        <stackTrace />
+        <pattern>
+          <omitEmptyFields>true</omitEmptyFields>
+          <pattern>
+            {
+            "message": "%message"
+            }
+          </pattern>
+        </pattern>
+      </providers>
+
+      <jsonGeneratorDecorator class="net.logstash.logback.mask.MaskingJsonGeneratorDecorator">
+
+        <!--
+          The default mask string can optionally be specified by <defaultMask>.
+          When the default mask string is not specified, **** is used.
+        -->
+        <defaultMask>****</defaultMask>
+
+        <!-- Field paths to mask added via <path> will use the default mask string -->
+      </jsonGeneratorDecorator>
+    </encoder>
+  </appender>
+
+  <!-- Appender to log to console in a JSON format, one JSON object per line -->
+  <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+      <providers>
+        <timestamp>
+          <fieldName>timestamp</fieldName>
+          <timeZone>UTC</timeZone>
+        </timestamp>
+        <loggerName>
+          <fieldName>loggerClass</fieldName>
+        </loggerName>
+        <threadName>
+          <fieldName>thread</fieldName>
+        </threadName>
+        <logLevel>
+          <fieldName>level</fieldName>
+        </logLevel>
+        <!-- Include Exception stack traces -->
+        <stackTrace>
+          <fieldName>stackTrace</fieldName>
+        </stackTrace>
+        <!-- Log all StructuredArgument instances -->
+        <arguments>
+          <includeNonStructuredArguments>false</includeNonStructuredArguments>
+        </arguments>
+        <!-- Log all MDC fields -->
+        <mdc />
+
+        <logstashMarkers/>
+
+        <throwableClassName>true</throwableClassName>
+
+        <!-- Assign logger fields to JSON object -->
+        <pattern>
+          <omitEmptyFields>true</omitEmptyFields>
+          <pattern>
+            {
+            "serviceName": "${springApplicationName:- }",
+            "message": ["%message"],
+            "serverName": "${serverName:-}",
+            "tags": "%marker"
+            }
+          </pattern>
+        </pattern>
+      </providers>
+
+      <jsonGeneratorDecorator class="net.logstash.logback.mask.MaskingJsonGeneratorDecorator">
+
+        <!--
+          The default mask string can optionally be specified by <defaultMask>.
+          When the default mask string is not specified, **** is used.
+        -->
+        <defaultMask>****</defaultMask>
+
+        <!-- Field paths to mask added via <path> will use the default mask string -->
+      </jsonGeneratorDecorator>
+    </encoder>
+  </appender>
+
+  <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+    <discardingThreshold>0</discardingThreshold> <!-- default 20, means drop lower event when has 20% capacity remaining -->
+    <appender-ref ref="CONSOLE_JSON" /> <!-- Alternative CONSOLE_JSON_LYT -->
+    <queueSize>256</queueSize> <!-- default 256 -->
+    <includeCallerData>false</includeCallerData><!-- default false -->
+    <neverBlock>true</neverBlock><!-- default false, set to true to cause the
+            Appender not block the application and just drop the messages -->
+  </appender>
+
+  <logger name="org.springframework.core.io.support" level="DEBUG" additivity="false">
+    <appender-ref ref="${log.appender}"/>
+  </logger>
+
+  <logger name="org.springframework.context.annotation" level="DEBUG" additivity="false">
+    <appender-ref ref="${log.appender}"/>
+  </logger>
+
+  <logger name="${log.package.name}" level="INFO" additivity="false">
+    <appender-ref ref="${log.appender}" />
+  </logger>
+
+  <root level="INFO">
+    <appender-ref ref="${log.appender}" />
+  </root>
+
+  <logger name="uk.gov.hmrc.ma.cads.client.EisNotificationClient" level="DEBUG" additivity="false">
+    <appender-ref ref="${log.appender}" />
+  </logger>
+
+  <!-- END OF COMMON -->
+
+  <springProfile name="dev | qa | sit | cit | preprod | prod | pvt | test">
+    <logger name="org.springframework.web.servlet.mvc.method.annotation"
+      level="${log.level}" additivity="false">
+      <appender-ref ref="ASYNC_CONSOLE"/>
+    </logger>
+  </springProfile>
+
+  <springProfile name="local">
+    <logger name="org.springframework.web.servlet.mvc.method.annotation"
+      level="${log.level}" additivity="false">
+      <appender-ref ref="CONSOLE"/>
+    </logger>
+  </springProfile>
+</configuration>

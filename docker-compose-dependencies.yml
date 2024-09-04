@@ -1,0 +1,27 @@
+# This docker-compose file is used to spin up only the applications dependencies. You can then connect your running
+# application to the containers which allows easier debugging.
+
+services:
+  rabbitMq:
+    image: rabbitmq:3-management-alpine
+    container_name: 'rabbitmq'
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - ./src/test/resources/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./src/test/resources/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-8
+    restart: always
+    environment:
+      MYSQL_DATABASE: 'my_db'
+      MYSQL_ROOT_PASSWORD: 'password'
+    ports:
+      - '3306:3306'
+    volumes:
+      - mysql-db:/var/lib/mysql
+volumes:
+  mysql-db:
+    driver: local

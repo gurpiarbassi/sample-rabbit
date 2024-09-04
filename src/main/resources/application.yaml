@@ -1,0 +1,54 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: my-service
+  datasource:
+    username: root
+    password: password
+    url: jdbc:mysql://localhost:3306/my_db
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  liquibase:
+    enabled: true
+    contexts: ddl
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    change-log: classpath://db/db.changelog-master.yaml
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    virtual-host: test-vh
+    publisher-returns: true
+    publisher-confirm-type: correlated
+    username: guest
+    password: guest
+
+management:
+  server:
+    port: 8094
+    health:
+      show-details: always
+      show-components: always
+      probes:
+        enabled: true # Unless we are running in k8s the readiness/liveness are not enabled by default
+      group:
+        readiness:
+          include: ping, diskSpace
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+app:
+  amqp:
+    input-queue: input-queue
+    consumer-retry-attempts: 3
+    concurrent-consumers: 3
+    max-concurrent-consumers: 10
+    consumer-back-off-interval: 1000
+    consumer-back-off-multiplier: 2
+    consumer-back-off-max-interval: 5000
+    prefetch-count: 0
+    producer-retry-attempts: 3
+log:
+  appender: ${LOG_APPENDER:CONSOLE}
